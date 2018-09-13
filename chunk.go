@@ -26,7 +26,7 @@ func (c *Chunk) AverageLength() float64 {
 }
 
 func (c *Chunk) Variance() float64 {
-	var averageLength float64 = c.AverageLength()
+	averageLength := c.AverageLength()
 	var sumDistance float64
 	for _, word := range c.Words {
 		sumDistance += math.Pow(float64(len(word.Text))-averageLength, 2.0)

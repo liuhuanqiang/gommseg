@@ -3,137 +3,129 @@ package gommseg
 import (
 	"bufio"
 	"bytes"
+	"fmt"
+	"io"
 	"os"
-	"path"
-	"runtime"
+	"regexp"
 	"strconv"
+	"strings"
+	"unicode"
 )
 
-// const (
-// 	ChineseCharLength = 3
-// )
+var hzRegexp = regexp.MustCompile("^[\u4e00-\u9fa5]$")
 
-var Ana *Segment
+var WordMap map[string]*Word
 
 func init() {
-	_, fileName, _, _ := runtime.Caller(1)
-	dataPath := path.Join(path.Dir(fileName), "d/data.txt")
-	Ana = NewSegment(dataPath)
+	InitWordMap()
 }
 
-type Segment struct {
-	WordMap map[string]*Word
-}
+func InitWordMap() {
+	filePath := "./data.txt"
 
-// "/Users/raquelken/Desktop/mini.txt"
-func NewSegment(fileName string) *Segment {
-	file, err := os.Open(fileName)
+	fp, err := os.Open(filePath)
 	if err != nil {
-		panic(err)
+		fmt.Errorf(err.Error())
+		os.Exit(0)
 	}
-	defer file.Close()
+	defer fp.Close()
 
-	reader := bufio.NewReader(file)
-	var (
-		er   error = nil
-		line []byte
-	)
+	WordMap = make(map[string]*Word)
 
-	var wordMap map[string]*Word
-	wordMap = make(map[string]*Word)
-
-	for er == nil {
-		line, _, er = reader.ReadLine()
+	reader := bufio.NewReader(fp)
+	for {
+		line, _, ok := reader.ReadLine()
+		if ok == io.EOF {
+			break
+		}
 		a := bytes.Split(line, []byte("\t"))
 
 		if len(a) >= 2 {
 			text := string(a[0])
 			freq, e := strconv.Atoi(string(a[1]))
 			if e == nil {
-				wordMap[text] = NewWord(text, freq)
+				WordMap[text] = NewWord(text, freq)
 			}
 		}
 	}
-
-	return &Segment{wordMap}
 }
 
-func (ana *Segment) Get(text string) (*Word, bool) {
-	word, ok := ana.WordMap[text]
+func GetWord(text string) (*Word, bool) {
+	word, ok := WordMap[text]
 	return word, ok
 }
 
-func (ana *Segment) MatchWords(text string) []*Word {
-	var (
-		matchWords  []*Word
-		matchString string = ""
-		firstChar   string
-		isFirstChar bool = false
-	)
+func MatchWords(text string) []*Word {
+
+	var matchWords []*Word
+	var matchString string
+	//	isFirstPunct := true
 
 	for _, char := range text {
-		matchString += string(char)
-		if !isFirstChar {
-			firstChar = matchString
-			isFirstChar = false
-		}
+		//		if unicode.IsPunct(char) {
 
-		if word, ok := ana.Get(matchString); ok {
+		//		}
+
+		matchString += string(char)
+		word, ok := GetWord(matchString)
+		if ok {
 			matchWords = append(matchWords, word)
 		}
 	}
+
 	if len(matchWords) == 0 {
-		// matchWords = append(matchWords, NewWord(string(text[0:ChineseCharLength]), 0))
-		matchWords = append(matchWords, NewWord(firstChar, 0))
+		matchWords = append(matchWords, NewWord(matchString, 0))
 	}
 
 	return matchWords
 }
 
-func (ana *Segment) Chunks(text string) []*Chunk {
+func Chunks(text string) []*Chunk {
 	var chunks []*Chunk
-	for _, word1 := range ana.MatchWords(text) {
+	for _, firstWord := range MatchWords(text) {
+
 		textLength := len(text)
-		wordLength1 := len(word1.Text)
-		if wordLength1 < textLength {
-			text1 := string([]byte(text)[wordLength1:textLength])
-			for _, word2 := range ana.MatchWords(text1) {
-				wordLength2 := len(word2.Text)
-				if wordLength1+wordLength2 < textLength {
-					text2 := string([]byte(text)[wordLength1+wordLength2 : textLength])
-					for _, word3 := range ana.MatchWords(text2) {
-						chunks = append(chunks, NewChunk([]*Word{word1, word2, word3}))
+		firstWordLen := len(firstWord.Text)
+		if firstWordLen < textLength {
+			text1 := string([]byte(text)[firstWordLen:textLength])
+			for _, secondWord := range MatchWords(text1) {
+				secondWordLen := len(secondWord.Text)
+				if firstWordLen+secondWordLen < textLength {
+					text2 := string([]byte(text)[firstWordLen+secondWordLen : textLength])
+					for _, thirdWord := range MatchWords(text2) {
+						chunks = append(chunks, NewChunk([]*Word{firstWord, secondWord, thirdWord}))
 					}
 				} else {
-					chunks = append(chunks, NewChunk([]*Word{word1, word2}))
+					chunks = append(chunks, NewChunk([]*Word{firstWord, secondWord}))
 				}
 			}
 		} else {
-			chunks = append(chunks, NewChunk([]*Word{word1}))
+			chunks = append(chunks, NewChunk([]*Word{firstWord}))
 		}
 	}
+
 	return chunks
 }
 
-func (ana *Segment) Filter(chunks []*Chunk) *Chunk {
-	var lengthFilterChunks []*Chunk
+func Filter(chunks []*Chunk) *Chunk {
+	var maxFilterChunks []*Chunk
 	var maxLength int = 0
 	for _, chunk := range chunks {
 		if chunk.Length() > maxLength {
-			lengthFilterChunks = []*Chunk{chunk}
+			maxFilterChunks = []*Chunk{chunk}
 			maxLength = chunk.Length()
 		} else if chunk.Length() == maxLength {
-			lengthFilterChunks = append(lengthFilterChunks, chunk)
+			maxFilterChunks = append(maxFilterChunks, chunk)
 		}
 	}
 
-	if len(lengthFilterChunks) == 1 {
-		return lengthFilterChunks[0]
+	if len(maxFilterChunks) == 1 {
+		return maxFilterChunks[0]
 	}
 
 	var averageLengthFilterChunks []*Chunk
 	var maxAverageLength float64 = 0
-	for _, chunk := range lengthFilterChunks {
+	for _, chunk := range maxFilterChunks {
 		if chunk.AverageLength() > maxAverageLength {
 			averageLengthFilterChunks = []*Chunk{chunk}
 			maxAverageLength = chunk.AverageLength()
@@ -177,24 +169,43 @@ func (ana *Segment) Filter(chunks []*Chunk) *Chunk {
 	return freqFilterChunks[0]
 }
 
-func (ana *Segment) firstWord(text string) string {
-	chunks := ana.Chunks(text)
-	chunk := ana.Filter(chunks)
+func firstWord(text string) string {
+	chunks := Chunks(text)
+	chunk := Filter(chunks)
 	return chunk.Words[0].Text
 }
 
-func (ana *Segment) Cut(text string) []string {
-	var (
-		pos        int = 0
-		textLength int = len(text)
-		result     []string
-	)
+func Cut(context string) []string {
+	var result []string
 
-	for pos < textLength {
-		str := string([]byte(text)[pos:textLength])
-		word := ana.firstWord(str)
-		result = append(result, word)
-		pos += len(word)
+	sentence := strings.FieldsFunc(context, split)
+	for _, text := range sentence {
+
+		textLength := len(text)
+		pos := 0
+		for pos < textLength {
+			str := string([]byte(text)[pos:textLength])
+			word := firstWord(str)
+			result = append(result, word)
+			pos += len(word)
+		}
 	}
 	return result
+}
+
+func split(s rune) bool {
+	if unicode.IsPunct(s) {
+		return true
+	}
+	if unicode.IsSpace(s) {
+		return true
+	}
+	if s == 1 {
+		return true
+	}
+	if string(s) == "|" {
+		return true
+	}
+
+	return false
 }

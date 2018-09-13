@@ -2,74 +2,15 @@ package gommseg
 
 import "testing"
 
-func TestSegmentGetWord(t *testing.T) {
-	text := "你好"
-	_, ok := Ana.Get(text)
-
-	if !ok {
-		t.Errorf("shit happen\n")
-	}
-}
-
-func TestSegmentWord(t *testing.T) {
-	text := "你好"
-	word, _ := Ana.Get(text)
-
-	if word.Text != text {
-		t.Errorf("expected %s, got %s", text, word.Text)
-	}
-
-	if word.Freq != 974 {
-		t.Errorf("word freq should be 974, got %d", word.Freq)
-	}
-}
-
-func TestSegmentMatchWordsLength(t *testing.T) {
-	text := "希望找到一个能发挥你能力的地方?"
-	// text := []byte("你好吗")
-
-	words := Ana.MatchWords(text)
-	if len(words) != 2 {
-		t.Errorf("words length should be 2, got %d, got %v", len(words), words)
-	}
-}
-
-func TestSegmentMatchWords(t *testing.T) {
-	text := "希望找到一个能发挥你能力的地方?"
-
-	words := Ana.MatchWords(text)
-	if words[0].Text != "希" {
-		t.Errorf("match word error")
-	}
-}
-
-func TestSegmentChunks(t *testing.T) {
-	text := "南京市长江大桥欢迎你"
-	chunks := Ana.Chunks(text)
-
-	if len(chunks) != 16 {
-		t.Errorf("expected 2, got %d", len(chunks))
-	}
-}
-
-func TestSegmentChunksFilter(t *testing.T) {
-	text := "南京市长江大桥欢迎你"
-	chunks := Ana.Chunks(text)
-
-	chunk := Ana.Filter(chunks)
-	if chunk.Words[0].Text != "南京市" && chunk.Length() != 27 {
-		t.Errorf("filter fail")
-	}
-}
-
 func TestSegmentCut(t *testing.T) {
-	text := "我们在野生动物园玩"
-	Ana.Cut(text)
-}
+	//text := "小s夸杨幂身材好，杨幂回复太精彩了！"
+	//text := "南京市长江大桥欢迎你"
+	//text := "a被誉为台湾第一气质美女的张钧甯,"
 
-func BenchmarkSegment(b *testing.B) {
-	text := "南京市长江大桥欢迎你"
-	for n := 0; n < b.N; n++ {
-		Ana.Cut(text)
+	//text := "今天给你介绍一下喵星的颜值天花板以拍猫著称的摄影师HansSlivester说"
+	text := "来！今天给你介绍一下喵星的颜值天花板以拍猫著称的摄影师HansSlivester说:“上帝在创造猫的时候，一定度过了愉快的一天。”而创造布偶猫的那一刻，应该是这一天里最快乐的时候。布偶猫的走红绝对算得上是纯种猫的传奇。这个年轻的猫种，几乎一出现就迅速获得了人们的关注，直到现在仍热度不减。ins：@siri_ragdoll这么美，一定是混血吧？是的。关于布偶猫从不掉线的颜值，许多品种猫都有贡献。想制作一张喵星人中的“网红脸”，你需要这些。暹罗猫|get蓝眼睛和重点色实际上，蓝星上任何一个拥有重点色的猫种，都源自暹罗猫的贡献，而与重点色搭配的，就是蓝到让你深陷其中的眼睛。伯曼猫|get丝滑的长被毛实际上，如果抛开体形上的差别，伯曼猫和布偶猫非常容易混淆。曾经有一段时间，伯曼猫的繁育者还认为布偶猫是盗版的伯曼猫。伯曼猫无论哪种颜色，都必须拥有长度盖过爪面的“白手套”。不过布偶猫中，也有白手套的毛色。缅因猫|get大体形布偶猫与缅因猫和挪威森林猫一起，共同承担了喵星人中的“大块头”的称号，母猫的体重即可达到3.6～6.8千克，而公猫的体重在5.4～9.1千克都是正常的，大体形同时带来了晚熟的体质，布偶猫基本要到4岁左右才能完全发育完全，当然，此后也一直处于“大宝宝”的状态。土耳其安哥拉猫|get神秘配方布偶猫的繁育者显然喜欢保持配方的神秘性，但随后人们认为布偶猫的白色长毛很可能来自土耳其安哥拉猫。甚至有人怀疑，它是从附近一个动物实验室中逃出来的，因此才有如此奇葩的“软萌”性格。文章内容节选自《宠物世界·猫迷》2017年2月刊-「封面故事」"
+	words := Cut(text)
+	for _, word := range words {
+		t.Log(word)
 	}
 }
